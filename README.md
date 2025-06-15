@@ -301,13 +301,6 @@ poetry run pytest -v
 poetry run pytest tests/test_mapping.py -v
 ```
 
-### Generate an HTML report (optional):
-
-```bash
-poetry add --group dev pytest-html
-pytest --html=report.html
-```
-
 ## Pipeline Workflow
 
 1. **Inbound (Client → TracOS)**:

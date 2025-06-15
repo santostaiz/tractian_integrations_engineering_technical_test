@@ -9,7 +9,7 @@ import os
 def run_inbound(repo: TracOSRepository):
     logger.info("Iniciando fluxo de entrada (Inbound)...")
     workorders = load_client_workorders(get_data_inbound_dir())
-
+    workorders = sorted(workorders, key=lambda x: int(x["orderNo"]))
     if not workorders:
         logger.warning(f"Nenhuma ordem encontrada no diretório {get_data_inbound_dir()}")
    
@@ -24,7 +24,7 @@ def run_inbound(repo: TracOSRepository):
 def run_outbound(repo: TracOSRepository):
     logger.info("Iniciando fluxo de saída (Outbound)...")
     unsynced = repo.get_unsynced_workorders()
-
+    unsynced = sorted(unsynced, key=lambda x: int(x["id"]))
     if not unsynced:
         logger.info("Nenhuma ordem pendente para sincronização.")
 
