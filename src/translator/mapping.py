@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import datetime, timezone
 
 STATUS_MAP = {
     "NEW": "created",
@@ -21,6 +21,12 @@ def get_status_from_client(data: dict) -> str:
     return "in_progress"  # valor padrão
 
 def client_to_tracos(raw: dict) -> dict:
+
+    if not raw.get("orderNo"):
+        raise ValueError(f"⚠️ Ordem inválida sem ID: {raw}")
+
+    status = get_status_from_client(raw)
+    
     """Traduz dados do sistema do cliente para o formato TracOS."""
 
     # Determina o status com base nos flags booleanos
@@ -41,10 +47,10 @@ def client_to_tracos(raw: dict) -> dict:
         "id": raw["orderNo"],
         "status": status,
         "title": raw["summary"],
-        "createdAt": datetime.fromisoformat(raw["creationDate"]),
-        "updatedAt": datetime.fromisoformat(raw["lastUpdateDate"]),
+        "createdAt": normalize_date(raw["creationDate"]),
+        "updatedAt": normalize_date(raw["lastUpdateDate"]),
         "deleted": raw.get("isDeleted", False),
-        "deletedAt": datetime.fromisoformat(raw["deletedDate"]) if raw.get("deletedDate") else None,
+        "deletedAt": normalize_date(raw["deletedDate"]) if raw.get("deletedDate") else None,
         "isSynced": False,
         "syncedAt": None
     }
@@ -57,9 +63,9 @@ def tracos_to_client(doc: dict) -> dict:
     return {
         "orderNo": doc["id"],
         "summary": doc.get("title", ""),
-        "creationDate": doc["createdAt"].isoformat(),
-        "lastUpdateDate": doc["updatedAt"].isoformat(),
-        "deletedDate": doc["deletedAt"].isoformat() if doc.get("deletedAt") else None,
+        "creationDate": normalize_date(doc["createdAt"]),
+        "lastUpdateDate": normalize_date(doc["updatedAt"]),
+        "deletedDate": normalize_date(doc["deletedAt"]) if doc.get("deletedAt") else None,
         "isDeleted": doc.get("deleted", False),
         "isCanceled": status == "cancelled",
         "isDone": status == "completed",
@@ -69,8 +75,24 @@ def tracos_to_client(doc: dict) -> dict:
         "isSynced": True
     }
 def normalize_date(date_str):
+    """
+    Converte uma string de data para UTC no formato ISO 8601.
+    """
     try:
+        if not date_str:
+            raise ValueError("Data vazia ou None.")
+
+        # Ajusta 'Z' (UTC simplificado) para '+00:00'
+        date_str = date_str.replace("Z", "+00:00")
+
         dt = datetime.fromisoformat(date_str)
-        return dt.astimezone().isoformat()
+
+        # Se não tem timezone, assume UTC
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+
+        # Retorna no formato ISO 8601 com UTC explícito
+        return dt.astimezone(timezone.utc).isoformat()
+
     except Exception:
-        return datetime.utcnow().isoformat()
+        return datetime.now(timezone.utc).isoformat()

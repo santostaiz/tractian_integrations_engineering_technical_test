@@ -166,3 +166,19 @@ poetry run pytest
 - **Permission Issues**: Check file permissions for data directories
 
 
+## Challenge Result 
+
+**Project Structure** 
+src/
+├── client/            → Interface com o cliente (arquivos JSON)
+│   └── reader.py      → Lê e escreve arquivos do cliente
+├── tracOS/            → Interface com o MongoDB (TracOS)
+│   └── repository.py  → Operações CRUD no MongoDB
+├── translator/        → Lógica de tradução dos dados
+│   ├── mapping.py     → Mapeamento de status, enums, campos
+│   ├── config.py      → Leitura de variáveis de ambiente
+│   ├── logger.py      → Sistema de logging
+│   └── __init__.py    → Organização do pacote
+├── main.py            → Pipeline principal de execução
+tests/                 → Testes automatizados
+│   └── test_e2e.py    → Teste ponta a ponta
