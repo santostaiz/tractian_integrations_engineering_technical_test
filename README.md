@@ -168,17 +168,155 @@ poetry run pytest
 
 ## Challenge Result 
 
+This project simulates an asynchronous integration between **TracOS** (Tractian's CMMS) and a client's ERP system. The goal is to synchronize work orders (WO) between both systems, supporting both the **Inbound** (Client → TracOS) and **Outbound** (TracOS → Client) data flows.
+
+## Features
+
+- **Inbound Flow** (Client → TracOS):
+  - Reads work orders from JSON files simulating the client's API.
+  - Translates data into the TracOS standard format.
+  - Inserts or updates records in MongoDB.
+
+- **Outbound Flow** (TracOS → Client):
+  - Reads work orders with `isSynced = False` from MongoDB.
+  - Translates data into the client's standard format.
+  - Writes JSON files for the client.
+  - Marks work orders as synced (`isSynced = True`).
+
+- Date normalization to UTC in ISO 8601 format.
+- Status mapping and translation between both systems.
+- Error handling with informative logs and resilience.
+
 **Project Structure** 
-src/
-├── client/            → Interface com o cliente (arquivos JSON)
-│   └── reader.py      → Lê e escreve arquivos do cliente
-├── tracOS/            → Interface com o MongoDB (TracOS)
-│   └── repository.py  → Operações CRUD no MongoDB
-├── translator/        → Lógica de tradução dos dados
-│   ├── mapping.py     → Mapeamento de status, enums, campos
-│   ├── config.py      → Leitura de variáveis de ambiente
-│   ├── logger.py      → Sistema de logging
-│   └── __init__.py    → Organização do pacote
-├── main.py            → Pipeline principal de execução
-tests/                 → Testes automatizados
-│   └── test_e2e.py    → Teste ponta a ponta
+```
+tractian_integrations_engineering_technical_test/
+├── data/                               # Diretórios de dados simulando integração
+│   ├── inbound/                        # JSONs do Cliente → TracOS (entrada)
+│   └── outbound/                       # JSONs do TracOS → Cliente (saída)
+├── docker-compose.yml                   # Configuração do MongoDB via Docker
+├── pyproject.toml                       # Configuração do projeto e dependências (Poetry)
+├── pytest.ini                           # Configuração do pytest
+├── README.md                            # Documentação do projeto
+├── setup.py                             # Script para gerar dados de exemplo
+├── src/                                 # Código-fonte principal
+│   ├── __init__.py                      # Inicializa o pacote
+│   ├── main.py                          # Script que executa o pipeline completo (inbound + outbound)
+│   ├── config.py                        # Configurações e leitura dinâmica de variáveis de ambiente
+│   ├── logger.py                        # Configuração centralizada de logs
+│   ├── client/                          # Módulo para integração com o cliente (simulação via arquivos JSON)
+│   │   ├── __init__.py
+│   │   ├── reader.py                    # Leitura de arquivos JSON do cliente (entrada)
+│   │   └── writer.py                    # Escrita de arquivos JSON para o cliente (saída)
+│   ├── tracOS/                          # Módulo que representa o sistema TracOS
+│   │   ├── __init__.py
+│   │   └── repository.py                # Operações no MongoDB (CRUD de ordens de serviço)
+│   ├── translator/                      # Módulo responsável pela tradução dos dados
+│   │   ├── __init__.py
+│   │   └── mapping.py                   # Mapeamento, tradução de status e normalização de dados
+├── tests/                               # Testes automatizados
+│   ├── __init__.py
+│   ├── conftest.py                      # Fixtures globais para os testes (ex.: conexão Mongo)
+│   ├── test_e2e.py                      # Teste de ponta a ponta (pipeline completo)
+│   ├── test_inbound.py                  # Testes do fluxo de entrada (inbound)
+│   ├── test_outbound.py                 # Testes do fluxo de saída (outbound)
+│   ├── test_reader_writer.py            # Testes de leitura e escrita de arquivos JSON
+│   ├── test_repository.py               # Testes do módulo de repositório (MongoDB)
+│   └── test_mapping.py                  # Testes de tradução, normalização e mapeamento de status
+           
+```
+## Technologies Used
+
+- Python 3.11+
+- MongoDB (via Docker Compose)
+- Poetry (dependency management)
+- Pytest (automated testing)
+- Structured logging (Python logging)
+- Integration simulated via JSON files
+
+## Setup and Execution
+
+### Prerequisites:
+- Python 3.11 or higher
+- [Poetry](https://python-poetry.org/) installed
+- Docker and Docker Compose installed
+
+### Setup steps:
+
+1️ Clone the repository:
+
+```bash
+git clone https://github.com/your-username/tractian_integrations_engineering_technical_test.git
+cd tractian_integrations_engineering_technical_test
+```
+
+2️ Install dependencies:
+
+```bash
+poetry install
+```
+
+3️ Start MongoDB with Docker Compose:
+
+```bash
+docker-compose up -d
+```
+
+4️ Configure environment variables:
+
+```bash
+# On Linux/macOS
+export MONGO_URI="mongodb://localhost:27017/tractian"
+export DATA_INBOUND_DIR="./data/inbound"
+export DATA_OUTBOUND_DIR="./data/outbound"
+
+# On Windows PowerShell
+$env:MONGO_URI="mongodb://localhost:27017/tractian"
+$env:DATA_INBOUND_DIR="./data/inbound"
+$env:DATA_OUTBOUND_DIR="./data/outbound"
+```
+
+5️ Generate example data:
+
+```bash
+poetry run python setup.py
+```
+
+6️ Run the pipeline:
+
+```bash
+poetry run python -m src.main
+```
+
+## Running Tests
+
+### Run all tests:
+
+```bash
+poetry run pytest -v
+```
+
+### Run a specific test:
+
+```bash
+poetry run pytest tests/test_mapping.py -v
+```
+
+### Generate an HTML report (optional):
+
+```bash
+poetry add --group dev pytest-html
+pytest --html=report.html
+```
+
+## Pipeline Workflow
+
+1. **Inbound (Client → TracOS)**:
+   - Reads JSON files from `data/inbound/`.
+   - Validates and translates data into the TracOS format.
+   - Inserts or updates records in MongoDB.
+
+2. **Outbound (TracOS → Client)**:
+   - Retrieves work orders with `isSynced = False` from MongoDB.
+   - Translates data into the client's format.
+   - Writes JSON files to `data/outbound/`.
+   - Updates `isSynced` to `True` and sets `syncedAt`.
